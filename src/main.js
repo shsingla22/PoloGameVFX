@@ -5,9 +5,9 @@ import { AudioEngine } from './audio/audio.js';
 import { HUD } from './ui/hud.js';
 import { Input } from './game/input.js';
 import { Game } from './game/game.js';
-import { Brain } from './game/ai.js';
 import { XRRig } from './xr/xr.js';
-import { TEAMS, DIFFICULTY } from './config.js';
+import { TEAMS } from './config.js';
+import { Post } from './render/post.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -19,7 +19,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.xr.enabled = true;
@@ -27,8 +27,11 @@ renderer.xr.setReferenceSpaceType('local-floor');
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.05, 1500);
-const quality = params.get('quality') || 'high';
-const arena = new Arena(scene, { quality });
+// Quality: 'high' (default desktop), 'low' (phones / Meta Quest browser), via ?quality=
+const isQuestBrowser = /OculusBrowser|Quest/i.test(navigator.userAgent);
+const quality = params.get('quality') || (isQuestBrowser ? 'low' : 'high');
+const arena = new Arena(scene, { quality, renderer });
+const post = new Post(renderer, scene, camera, quality);
 const vfx = new VFX(scene);
 const audio = new AudioEngine();
 const hud = new HUD();
@@ -37,6 +40,7 @@ const xr = new XRRig(renderer, scene, camera);
 
 function resize() {
   renderer.setSize(innerWidth, innerHeight);
+  post.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   vfx.setScale(innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))));
@@ -47,14 +51,13 @@ resize();
 // ---------- Game lifecycle ----------
 let game = null;
 let mode = 'menu';     // menu | play | paused | over
-const settings = { difficulty: 'club', chukkers: 4, chukkerSeconds: 150 };
+const settings = { difficulty: 'club', chukkers: 4, chukkerSeconds: 150, swingAssist: true };
 
 function newGame(demo) {
   if (game) game.dispose();
-  game = new Game({ scene, camera, arena, vfx, audio, hud, input, xr, opts: { ...settings, demo } });
+  game = new Game({ scene, camera, arena, vfx, audio, hud, input, xr, opts: { ...settings, demo, quality } });
   if (demo) {
-    // Attract mode: the "player" is also driven by AI and the camera is the broadcast view.
-    game.brains.push(new Brain(game.player, DIFFICULTY.club));
+    // Attract mode: the "player" is also driven by AI (inside the Sim) and the camera is the broadcast view.
     game.applyPlayerInput = () => { input.drain(); };
     game.cameraMode = 'TV';
   }
@@ -122,6 +125,16 @@ for (const el of document.querySelectorAll('[data-chuk]')) el.addEventListener('
   settings.chukkers = Number(el.dataset.chuk);
   document.querySelectorAll('[data-chuk]').forEach((b) => b.classList.toggle('on', b === el));
 });
+for (const el of document.querySelectorAll('[data-assist]')) el.addEventListener('click', () => {
+  settings.swingAssist = el.dataset.assist === 'on';
+  document.querySelectorAll('[data-assist]').forEach((b) => b.classList.toggle('on', b === el));
+});
+// Browsers swallow Esc to release pointer lock; treat losing the lock mid-match as "pause".
+document.addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement && mode === 'play' && !xr.active && performance.now() - lastLockTime > 300) togglePause();
+  if (document.pointerLockElement) lastLockTime = performance.now();
+});
+let lastLockTime = 0;
 $('play').addEventListener('click', startMatch);
 $('again').addEventListener('click', startMatch);
 $('tomenu').addEventListener('click', backToMenu);
@@ -170,11 +183,12 @@ renderer.setAnimationLoop(() => {
   const dt = clock.getDelta();
   if (game) game.update(dt);
   vrMenuInput();
-  renderer.render(scene, camera);
+  post.render(scene, camera);
   frames++; fpsT += dt;
   if (fpsT > 1) { $('fps').textContent = `${Math.round(frames / fpsT)} fps`; frames = 0; fpsT = 0; }
 });
 
 newGame(true);
 if (params.get('autostart')) startMatch();
-window.__polo = { get game() { return game; }, renderer, scene, camera, startMatch, settings, xr, vfx };
+window.__polo = { get game() { return game; }, renderer, scene, camera, startMatch, settings, xr, vfx, post, arena,
+  stopLoop: () => renderer.setAnimationLoop(null), renderOnce: () => post.render(scene, camera) };

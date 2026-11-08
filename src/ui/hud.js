@@ -18,6 +18,10 @@ export class HUD {
     this.map = document.getElementById('minimap');
     this.mctx = this.map.getContext('2d');
     this.toastT = 0;
+    this.flashEl = document.getElementById('flash');
+    this.hintEl = document.getElementById('hint');
+    this.ptrEl = document.getElementById('ballptr');
+    this.flashT = 0; this.hintT = 0;
     this.score.innerHTML = `
       <div class="team" style="--c:${hex(TEAMS[0].color)}"><span class="name">${TEAMS[0].name}</span><span class="pts" id="s0">0</span></div>
       <div class="mid"><div id="chukker">CHUKKER 1</div><div id="clock">2:30</div></div>
@@ -36,6 +40,15 @@ export class HUD {
     this.toastT = dur;
   }
 
+  /** Short centre-screen feedback ("Big hit!", "Ride-off!"). */
+  flash(text) {
+    this.flashEl.textContent = text;
+    this.flashEl.classList.remove('show'); void this.flashEl.offsetWidth; this.flashEl.classList.add('show');
+    this.flashT = 1.0;
+  }
+
+  hint(text) { this.hintEl.textContent = text; this.hintEl.classList.add('show'); this.hintT = 5; }
+
   log(text, color = '#fff') {
     const d = document.createElement('div');
     d.textContent = text; d.style.color = color;
@@ -46,19 +59,30 @@ export class HUD {
 
   update(dt, game) {
     const m = game.match, p = game.player;
+    if (this.flashT > 0 && (this.flashT -= dt) <= 0) this.flashEl.classList.remove('show');
+    if (this.hintT > 0 && (this.hintT -= dt) <= 0) this.hintEl.classList.remove('show');
+    const ang = game.ballPointer ? game.ballPointer() : null;
+    if (ang === null || !m.inPlay) this.ptrEl.style.opacity = 0;
+    else {
+      const r = Math.min(innerWidth, innerHeight) * 0.38;
+      this.ptrEl.style.opacity = 0.9;
+      this.ptrEl.style.transform = `translate(${innerWidth / 2 + Math.cos(ang) * r * 1.3 - 18}px, ${innerHeight / 2 + Math.sin(ang) * r - 18}px) rotate(${ang}rad)`;
+    }
     if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) { this.toastEl.className = ''; this.subEl.className = ''; } }
     this.s0.textContent = m.score[0]; this.s1.textContent = m.score[1];
     this.chukEl.textContent = m.overtime ? 'EXTRA CHUKKER' : `CHUKKER ${m.chukker}/${m.opts.chukkers}`;
     this.clockEl.textContent = fmt(Math.max(0, m.clock));
     this.clockEl.classList.toggle('low', m.clock < 15 && m.state === 'play');
     if (p) {
-      const g = game.input.sprint && p.stamina > 0.05 && p.speed > GAITS[4].speed * 0.95 ? 'Flat out' : GAITS[game.input.gait].name;
-      this.gaitEl.textContent = `${g} · ${(p.speed * 3.6).toFixed(0)} km/h`;
+      // Show the gait the pony is actually in, and where you're asking it to go.
+      const actual = p.speed > GAITS[4].speed * 1.03 ? 'Flat out' : GAITS[p.gaitIndex()].name;
+      const target = game.input.sprint && p.stamina > 0.05 ? 'Flat out' : GAITS[game.input.gait].name;
+      this.gaitEl.innerHTML = `${actual} <small>${target !== actual ? '→ ' + target : ''}</small> · ${(p.speed * 3.6).toFixed(0)} km/h`;
       this.stamEl.style.width = `${p.stamina * 100}%`;
       this.stamEl.style.background = p.stamina < 0.25 ? '#ff5a3c' : '#5fd38d';
       const ch = p.swing.state === 'windup' ? Math.min(1, (0.45 + p.swing.charge) / 1) : 0;
       this.chargeEl.style.width = `${ch * 100}%`;
-      this.sideEl.textContent = game.input.nearSide ? 'NEAR-SIDE (left)' : 'OFF-SIDE (right)';
+      this.sideEl.textContent = (game.input.nearSide ? 'NEAR-SIDE' : 'OFF-SIDE') + (game.swingAssist ? ' · assist' : '');
     }
     this.camEl.textContent = game.cameraMode;
     this.drawMap(game);

@@ -84,7 +84,7 @@ export class Match {
     let p = spot.clone();
     const offenderOwnGoal = goalX; // the fouled team attacks the offender's goal
     if (Math.abs(spot.x - offenderOwnGoal) < ARENA.length / 3) {
-      p.set(offenderOwnGoal - dir * 25, 0, 0);
+      p.set(offenderOwnGoal - dir * 27, 0, 0);
       label = `${label} · Penalty 2`;
     } else {
       label = `${label} · Penalty 5`;
@@ -137,7 +137,8 @@ export class Match {
         if (this.stateTime > MATCH.throwInDelay && !this._bowled) { this._bowled = true; this.bowlBall(); this.setState('play'); }
         break;
       case 'freehit':
-        if (this.stateTime > 1.2) this.setState('play');
+        // Opponents keep their distance until the ball is struck (or the hitter dawdles).
+        if (this.stateTime > 8) this.setState('play');
         break;
       case 'goal':
         if (this.stateTime > MATCH.goalCelebration) {
@@ -256,21 +257,25 @@ export class Match {
   }
 
   /** Called by the game when two ponies collide. */
-  registerContact(a, b, relSpeed) {
+  /**
+   * Called by the sim when two ponies touch. c = { aIn, bIn, closing }: how fast each pony was
+   * driving into the other along the contact normal. Bumps and ride-offs are part of polo;
+   * only a hard, angled charge is penalised, and never against the right-of-way holder.
+   */
+  registerContact(a, b, c) {
     if (this.state !== 'play' || a.team === b.team) return;
     const angle = Math.acos(Math.max(-1, Math.min(1, a.forward.dot(b.forward))));
-    if (angle < Math.PI / 4) {
-      // Shoulder-to-shoulder at matching speed: a legal ride-off.
-      if (relSpeed > 0.5) this.emit('rideoff', { a: a.id, b: b.id, pos: a.pos.clone().lerp(b.pos, 0.5) });
+    if (angle < Math.PI / 3.2) {
+      // Shoulder-to-shoulder at similar heading: a legal ride-off.
+      if (c.closing > 0.3) this.emit('rideoff', { a: a.id, b: b.id, pos: a.pos.clone().lerp(b.pos, 0.5) });
       return;
     }
-    if (relSpeed < 7.5) return;
-    // Side-on collision at speed: the one not holding the line is penalised.
-    let offender = a, victim = b;
-    if (this.lob && this.lob.holderId === a.id) { offender = b; victim = a; }
-    else if (!this.lob || this.lob.holderId !== b.id) {
-      // No ROW: whoever charged in faster commits the foul.
-      if (b.speed > a.speed) { offender = b; victim = a; }
+    let offender = a, victim = b, drive = c.aIn;
+    if (c.bIn > c.aIn) { offender = b; victim = a; drive = c.bIn; }
+    if (this.lob && this.lob.holderId === offender.id) return;    // the ROW holder can't foul by riding the line
+    if (angle < Math.PI / 2.4 || drive < 6.5) {
+      this.emit('bump', { pos: a.pos.clone().lerp(b.pos, 0.5) });
+      return;
     }
     if (offender.foulCooldown > 0) return;
     offender.foulCooldown = 3;

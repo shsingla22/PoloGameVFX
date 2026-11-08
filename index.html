@@ -15,6 +15,9 @@
     <div id="toast"></div>
     <div id="subtoast"></div>
     <div id="feed"></div>
+    <div id="flash"></div>
+    <div id="hint"></div>
+    <div id="ballptr">➤</div>
     <div id="rider-panel">
       <div id="gait">Halt</div>
       <div class="bar"><div id="stamina-fill"></div></div>
@@ -36,6 +39,8 @@
         <button data-chuk="2">2</button><button data-chuk="4" class="on">4</button><button data-chuk="6">6</button></div>
       <div class="opt"><span>Length</span>
         <button data-len="90">1:30</button><button data-len="150" class="on">2:30</button><button data-len="420">7:00</button></div>
+      <div class="opt"><span>Swing assist</span>
+        <button data-assist="on" class="on">On</button><button data-assist="off">Off (pro timing)</button></div>
       <div class="actions">
         <button id="play" class="primary">Play on desktop</button>
         <button id="vr" class="vr">Checking for VR…</button>
@@ -64,12 +69,13 @@
     <button id="help-close">×</button>
     <h3>Desktop</h3>
     <ul>
-      <li><b>W / S</b> — change gait (halt · walk · trot · canter · gallop)</li>
+      <li><b>W / S</b> — tap or hold to change gait (halt · walk · trot · canter · gallop)</li>
       <li><b>A / D</b> — steer &nbsp; <b>Shift</b> — flat-out (uses stamina)</li>
       <li><b>Hold Space / Left mouse</b> — wind up, <b>release</b> to strike a forehand</li>
-      <li><b>F / Right mouse</b> — backhand &nbsp; <b>Q</b> — switch off-side / near-side</li>
+      <li><b>F / Right mouse</b> — backhand &nbsp; <b>Q</b> — prefer near-side (auto when the ball is close)</li>
+      <li><b>E</b> — call for a pass from a teammate &nbsp; <b>Ring under the ball turns green</b> = in your strike lane</li>
       <li><b>Mouse</b> — fine aim (click to lock) &nbsp; <b>C</b> — camera &nbsp; <b>M</b> — mute &nbsp; <b>Esc</b> — pause</li>
-      <li>Gamepad: left stick ride, RT forehand, LT backhand, A sprint, LB side</li>
+      <li>Gamepad: left stick ride, RT forehand, LT backhand, A sprint, B call for pass, LB side</li>
     </ul>
     <h3>Meta Quest</h3>
     <ul>
@@ -80,7 +86,7 @@
     <h3>Rules that matter</h3>
     <ul>
       <li>Keep the ball on your <b>off-side</b> (right) for the strongest shots.</li>
-      <li>The rider following the <b>line of the ball</b> has right of way. Crossing in front of them is a foul.</li>
+      <li>The rider following the <b>line of the ball</b> has right of way — shown as a dashed line (red when it's theirs). Crossing in front of them is a foul.</li>
       <li>Side-by-side <b>ride-offs</b> are legal; T-boning at speed is dangerous riding.</li>
       <li>Teams <b>change ends after every goal</b>. A tie after the last chukker goes to a golden-goal extra chukker.</li>
     </ul>

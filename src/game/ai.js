@@ -23,6 +23,7 @@ export class Brain {
     this.releaseAt = -1;
     rider.speedMul = difficulty.speedMul;
     rider.aimBlend = 0.55 + difficulty.skill * 0.4;
+    rider.leanRange = 0.08 + difficulty.skill * 0.3;
   }
 
   update(dt, ctx) {
@@ -32,7 +33,7 @@ export class Brain {
     r.steer = 0;
 
     // Release a wound-up swing at the planned moment.
-    if (r.swing.state === 'windup' && r.swing.t >= this.releaseAt) r.releaseSwing(0.55 + this.d.skill * 0.45);
+    if (r.swing.state === 'windup' && r.swing.t >= this.releaseAt) r.releaseSwing(this.power ?? 0.8);
 
     const st = match.state;
     if (st === 'throwin') { r.desiredSpeed = 0; r.targetHeading = -Math.PI / 2; return; }
@@ -80,6 +81,15 @@ export class Brain {
     // Shot selection
     const goal = new Vector3(attackX, 0, (Math.random() - 0.5) * ARENA.goalWidth * 0.55);
     this.aim = goal.sub(tmp.set(ball.pos.x, 0, ball.pos.z)).normalize();
+    // The human called for the ball: pass to where they're going.
+    if (this.mode === 'chase' && ctx.passTo && ctx.passTo.team === r.team && ctx.passTo !== r) {
+      const q = ctx.passTo;
+      const lead = Math.min(14, 4 + q.speed * 0.7);
+      this.aim = new Vector3(q.pos.x + q.forward.x * lead - ball.pos.x, 0, q.pos.z + q.forward.z * lead - ball.pos.z).normalize();
+      this.passing = true;
+      return;
+    }
+    this.passing = false;
     // Pass to an open forward teammate sometimes.
     if (this.mode === 'chase' && Math.abs(ball.pos.x - attackX) > 35 && Math.random() < 0.35 + this.d.skill * 0.2) {
       const mate = riders.find((q) => q.team === r.team && q !== r && (q.pos.x - ball.pos.x) * dir > 10);
@@ -88,8 +98,15 @@ export class Brain {
         if (open) this.aim = tmp.set(mate.pos.x + dir * 8 - ball.pos.x, 0, mate.pos.z - ball.pos.z).normalize().clone();
       }
     }
-    // Skill-based aim error.
-    const err = (Math.random() - 0.5) * (1 - this.d.skill) * 0.5;
+    // Shot power: dribble (tap it along) from long range, shoot hard near goal, passes measured.
+    const distGoal = Math.hypot(attackX - ball.pos.x, ball.pos.z);
+    if (this.passing) this.power = 0.6;
+    else if (distGoal > 42) this.power = 0.45 + Math.random() * 0.15;
+    else this.power = 0.7 + this.d.skill * 0.3;
+    // Penalty pressure: set-piece shots are less certain than they look.
+    if (match.state === 'freehit') this.power = 0.75 + Math.random() * 0.25;
+    // Skill-based aim error, worse from distance.
+    const err = (Math.random() - 0.5) * (1.3 - this.d.skill * 0.75) * (0.42 + distGoal / 50) * (match.state === 'freehit' ? 1.6 : 1);
     this.aim.applyAxisAngle(new Vector3(0, 1, 0), err);
 
     if (this.mode === 'position') {
@@ -102,8 +119,14 @@ export class Brain {
         this.target.set(b.x - dir * 5, 0, b.z + side * 9);
         if (!this.weHaveIt && theirs) this.target.copy(theirs.pos).addScaledVector(theirs.right, 2.5); // ride him off
       } else {
-        // Back: sit between ball and our goal.
+        // Back: sit between ball and our goal; close to the mouth when the ball is in range (goal-keeping).
         this.target.set(ownX + (b.x - ownX) * 0.3, 0, b.z * 0.25);
+        const toBall = new Vector3(b.x - ownX, 0, b.z);
+        const dBall = toBall.length();
+        if (dBall < 38) {
+          toBall.normalize();
+          this.target.set(ownX + toBall.x * Math.min(7, dBall * 0.35), 0, toBall.z * Math.min(7, dBall * 0.35));
+        }
         if (!this.weHaveIt && theirs && Math.abs(theirs.pos.x - ownX) < 40) this.target.copy(theirs.pos).addScaledVector(tmp.set(ownX - theirs.pos.x, 0, -theirs.pos.z).normalize(), 3);
       }
     }
@@ -159,8 +182,28 @@ export class Brain {
         }
       }
     }
+    // Predictive avoidance: don't T-bone anyone (that's a dangerous-riding foul).
+    let brake = 1;
+    for (const q of riders) {
+      if (q === r) continue;
+      const px = q.pos.x - r.pos.x, pz = q.pos.z - r.pos.z;
+      if (px * px + pz * pz > 15 * 15) continue;
+      const vx = q.vel.x - r.vel.x, vz = q.vel.z - r.vel.z;
+      const vv = vx * vx + vz * vz;
+      if (vv < 1) continue;
+      const t = -(px * vx + pz * vz) / vv;                     // time of closest approach
+      if (t < 0 || t > 1.1) continue;
+      const mx = px + vx * t, mz = pz + vz * t;
+      if (mx * mx + mz * mz > 2.4 * 2.4) continue;
+      const angled = Math.abs(r.forward.dot(q.forward)) < 0.82;
+      if (!angled) continue;                                    // parallel = ride-off, that's fine
+      // Steer away from the side the other pony is on and check speed.
+      const side = Math.sign(px * r.right.x + pz * r.right.z) || 1;
+      heading -= side * 0.7 * (1.1 - t);
+      brake = Math.min(brake, 0.45 + t * 0.4);
+    }
     r.targetHeading = heading;
-    let want = Math.min(speedCap, d * 1.3);
+    let want = Math.min(speedCap, d * 1.3) * brake;
     // Slow for sharp turns.
     let dh = heading - r.heading;
     dh = Math.abs(Math.atan2(Math.sin(dh), Math.cos(dh)));

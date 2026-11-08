@@ -41,7 +41,7 @@ class ParticleSystem {
           vec4 mv = modelViewMatrix * vec4(position,1.0);
           gl_Position = projectionMatrix * mv;
           gl_PointSize = clamp(size * uScale / max(0.1, -mv.z), 0.0, 256.0);
-          vA = alpha; vC = color; vSeed = seed;
+          vA = alpha * smoothstep(0.8, 3.5, -mv.z); vC = color; vSeed = seed;   // fade particles hugging the lens
         }`,
       fragmentShader: `
         varying float vA; varying vec3 vC; varying float vSeed;
@@ -308,7 +308,7 @@ export class VFX {
     for (let i = 0; i < n; i++) {
       this.dust.spawn(x + (Math.random() - 0.5) * 0.3, 0.08, z + (Math.random() - 0.5) * 0.3,
         -dirX * speed * 0.15 + (Math.random() - 0.5) * 1.2, 0.4 + Math.random() * 0.9 * k, -dirZ * speed * 0.15 + (Math.random() - 0.5) * 1.2,
-        0.9 + Math.random() * 0.9 * k, 0.25, 0.9 + k * 1.1, 0.62, 0.53, 0.38, 0.22 + 0.25 * k, -0.15, 1.6);
+        0.8 + Math.random() * 0.8 * k, 0.2, 0.6 + k * 0.8, 0.64, 0.56, 0.42, 0.16 + 0.2 * k, -0.15, 1.8);
     }
     if (k > 0.55 && Math.random() < 0.5) {
       for (let i = 0; i < 2; i++)

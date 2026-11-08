@@ -25,9 +25,9 @@ export const BALL = {
   gravity: 9.81,
   restitutionGround: 0.48,
   restitutionBoards: 0.62,
-  rollingDecel: 2.3,     // m/s^2 on grass
-  airDrag: 0.012,        // quadratic drag coefficient
-  maxSpeed: 32,
+  rollingDecel: 4.2,     // m/s^2 on grass
+  airDrag: 0.02,         // quadratic drag coefficient
+  maxSpeed: 27,
 };
 
 // Gait speed bands (m/s). Polo ponies gallop at up to ~55 km/h.

@@ -124,11 +124,25 @@ export class Rider {
   beginSwing(kind = 'fore', side = 1) {
     if (!this.canSwing()) return false;
     const s = this.swing;
-    s.state = 'windup'; s.t = 0; s.kind = kind; s.side = side; s.hit = false; s.charge = 0;
+    s.state = 'windup'; s.t = 0; s.kind = kind; s.side = side; s.hit = false; s.charge = 0; s.lat = null;
     s.from = REST;
     s.to = kind === 'fore' ? REST + 1.38 : REST - 0.7;
     this.malletSide = side;
     return true;
+  }
+
+  /** Feed the ball's lateral offset (on the swing side) so the rider leans to meet it. */
+  trackBall(ballPos) {
+    const s = this.swing;
+    if (s.state !== 'windup' && s.state !== 'strike') return;
+    if (s.state === 'strike' && Math.cos(this.malletAngle) < -0.2) return;   // committed once past the bottom
+    const r = this.right;
+    const lat = ((ballPos.x - this.pos.x) * r.x + (ballPos.z - this.pos.z) * r.z) * s.side;
+    if (lat > 0.35 && lat < 2.1) {
+      const nominal = 1.17, range = this.leanRange ?? 0.7;     // how far this rider can lean
+      const want = Math.max(nominal - range, Math.min(nominal + range, lat));
+      s.lat = s.lat == null ? want : s.lat + (want - s.lat) * 0.35;
+    }
   }
 
   /** Release the wind-up into the strike. power 0..1 */
@@ -173,14 +187,18 @@ export class Rider {
     const side = this.malletSide;
     this.shoulder.copy(this.pos).addScaledVector(UP, MALLET.shoulderHeight).addScaledVector(r, MALLET.shoulderSide * side);
     const H = MALLET.shoulderHeight - 0.06;
-    const L = Math.sqrt(Math.max(0.01, MALLET.reach * MALLET.reach - H * H));
+    // Riders lean in or out of the saddle to meet the ball: the lateral reach follows the
+    // ball's offset (lat, measured from the pony's centre line) within what a body can do.
+    const baseL = Math.sqrt(Math.max(0.01, MALLET.reach * MALLET.reach - H * H));
+    const L = this.swing.lat != null && this.swing.state !== 'idle' ? Math.max(0.28, Math.min(1.55, this.swing.lat - MALLET.shoulderSide)) : baseL;
+    const reach = Math.sqrt(L * L + H * H);
     // d0: unit vector from shoulder to the ground contact point beside the pony.
     const d0x = r.x * side * L, d0y = -H, d0z = r.z * side * L;
     const c = Math.cos(this.malletAngle), sn = Math.sin(this.malletAngle);
     this.head.set(
-      this.shoulder.x + d0x * c + f.x * sn * MALLET.reach,
+      this.shoulder.x + d0x * c + f.x * sn * reach,
       this.shoulder.y + d0y * c,
-      this.shoulder.z + d0z * c + f.z * sn * MALLET.reach,
+      this.shoulder.z + d0z * c + f.z * sn * reach,
     );
     if (this.head.y < MALLET.headRadius * 0.5) this.head.y = MALLET.headRadius * 0.5;
   }

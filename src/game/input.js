@@ -17,14 +17,16 @@ export class Input {
     this.events = [];            // 'swingStart:fore', 'swingRelease', 'camera', 'pause', 'mute', 'help'
     this.padPrev = {};
     this.enabled = true;
+    this.holdT = 0;              // hold W/S to keep stepping gaits
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
       const k = e.code;
       this.keys.add(k);
       if (!this.enabled) { if (k === 'Escape' || k === 'KeyP') this.events.push('pause'); return; }
-      if (k === 'KeyW' || k === 'ArrowUp') this.gait = Math.min(GAITS.length - 1, this.gait + 1);
-      if (k === 'KeyS' || k === 'ArrowDown') this.gait = Math.max(0, this.gait - 1);
+      if (k === 'KeyW' || k === 'ArrowUp') { this.gait = Math.min(GAITS.length - 1, this.gait + 1); this.holdT = 0; }
+      if (k === 'KeyS' || k === 'ArrowDown') { this.gait = Math.max(0, this.gait - 1); this.holdT = 0; }
+      if (k === 'KeyE') this.events.push('pass');
       if (k === 'Space' || k === 'KeyJ') this.startSwing('fore');
       if (k === 'KeyF' || k === 'KeyK') this.startSwing('back');
       if (k === 'KeyQ') this.nearSide = !this.nearSide;
@@ -73,6 +75,13 @@ export class Input {
     if (k.has('KeyA') || k.has('ArrowLeft')) steer -= 1;
     if (k.has('KeyD') || k.has('ArrowRight')) steer += 1;
     this.sprint = k.has('ShiftLeft') || k.has('ShiftRight');
+    // Holding W/S keeps stepping through the gaits (tap still works one step at a time).
+    const up = k.has('KeyW') || k.has('ArrowUp'), down = k.has('KeyS') || k.has('ArrowDown');
+    if (up || down) {
+      this.holdT += dt;
+      if (this.holdT > 0.32) { this.holdT -= 0.22; this.gait = Math.max(0, Math.min(GAITS.length - 1, this.gait + (up ? 1 : -1))); }
+    } else this.holdT = 0;
+    if (this.sprint && this.gait < 3) this.gait = 4;      // Shift from a standstill = go
     // Aim recentres slowly when not being pushed.
     this.aimOffset *= Math.exp(-dt * 0.8);
 
@@ -95,6 +104,8 @@ export class Input {
       if (!lt && prev.lt && this.swingHeld === 'back') this.endSwing();
       if (p.buttons[4]?.pressed && !prev.lb) this.nearSide = !this.nearSide;
       if (p.buttons[3]?.pressed && !prev.y) this.events.push('camera');
+      if (p.buttons[1]?.pressed && !prev.b) this.events.push('pass');
+      prev.b = p.buttons[1]?.pressed;
       if (p.buttons[9]?.pressed && !prev.start) this.events.push('pause');
       prev.rt = rt; prev.lt = lt; prev.lb = p.buttons[4]?.pressed; prev.y = p.buttons[3]?.pressed; prev.start = p.buttons[9]?.pressed;
       break;

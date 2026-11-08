@@ -15,9 +15,8 @@ A full polo field is about 275 × 145 m. That is too much empty space for a shor
 - **Penalties:** a foul in the offending team's defensive third gives a Penalty 2 from the 25 m spot. Anywhere else gives a Penalty 5, a free hit from the spot of the foul. Defending players must give 9 m clearance.
 
 ## Performance budget (Quest 3, 72–90 Hz)
-- About 200–300 draw calls and about 300k triangles at the current scene complexity.
-- The crowd, trees and decals each draw as one instanced mesh, and each particle system is one draw call.
-- No post-processing. Shadows come from one shadow map that follows the action. Particle counts drop in VR.
+- The `low` tier is chosen automatically in the Quest Browser. It comes to about 290 draw calls and 430k triangles: ponies merged per animated segment, an instanced crowd, trees and decals, 50k grass blades, a standard coat material and no post-processing.
+- The desktop `high` tier adds MSAA, GTAO, bloom, a film grade, 4k shadows, 300k grass blades and a physical coat with sheen.
 - Settle these figures with on-device profiling (OVR Metrics Tool / Meta Runtime Optimizer).
 
 ## Roadmap

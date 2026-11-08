@@ -13,7 +13,7 @@ test('rolling ball slows to a stop on turf', () => {
   b.vel.set(10, 0, 0);
   run(b, 8);
   assert.ok(b.speed < 0.01);
-  assert.ok(b.pos.x > 15 && b.pos.x < 30, `rolled ${b.pos.x}`);
+  assert.ok(b.pos.x > 8 && b.pos.x < 20, `rolled ${b.pos.x}`);
 });
 
 test('lofted ball bounces and settles on the ground', () => {

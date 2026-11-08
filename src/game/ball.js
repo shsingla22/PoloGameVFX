@@ -39,7 +39,7 @@ export class BallPhysics {
       return;
     }
 
-    const airborne = p.y > r + 1e-3 || v.y > 0.05;
+    const airborne = p.y > r + 1e-3 || v.y > 0.05 || v.y < -0.5;
     if (airborne) {
       v.y -= BALL.gravity * dt;
       const s = v.length();

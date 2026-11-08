@@ -30,15 +30,26 @@ npm run dev:quest
 
 | | Desktop | Meta Quest |
 |---|---|---|
-| Gait (halt → gallop) | `W` / `S` | Left stick up / down |
+| Gait (halt → gallop) | `W` / `S` (tap or hold) | Left stick up / down |
 | Steer | `A` / `D` | Left stick left / right |
 | Flat-out sprint (stamina) | `Shift` | Left grip or right trigger |
-| Forehand | Hold `Space` / LMB, release to strike | **Swing the right controller**: it is the mallet |
+| Forehand | Hold `Space` / LMB, release to strike (swing assist times the contact) | **Swing the right controller**: it is the mallet |
 | Backhand | `F` / RMB | Swing backwards |
-| Off-side ↔ near-side | `Q` | Reach to either side |
+| Off-side ↔ near-side | Automatic when the ball is close; `Q` to prefer near-side | Reach to either side |
+| Call for a pass | `E` (gamepad B) | |
 | Fine aim | Mouse (click to lock) | Aim assist toggle: `A` |
 | Camera (Chase / Rider / TV) | `C` | Seat-height recentre: `B` / `Y` |
 | Pause / mute / help | `Esc` / `M` / `H` | |
+
+## Reading the turf
+
+- **The ring under the ball** turns **yellow** when the ball is coming into your strike lane and **green** when it's time to swing.
+- **The dashed line on the turf** is the line of the ball. It is **red** when the opponents have right of way, so don't cut across it in front of them, and **gold** when it's yours.
+- **An arrow at the screen edge** points to the ball when it's off screen.
+
+## Quality tiers
+
+`?quality=high` is the default on desktop. It adds post-processing (GTAO, bloom and a grade), 4k shadows and 300k grass blades. `?quality=low` is picked automatically in the Meta Quest Browser.
 
 ## What's in the game
 
@@ -63,13 +74,16 @@ src/
   game/rider.js        pony locomotion + mallet swing kinematics + swept hit detection
   game/rules.js        match flow, line of the ball / right of way, fouls, penalties
   game/ai.js           role-based riders
-  game/game.js         orchestrates sim, events, camera
+  game/sim.js          the complete rendering-free match simulation (shared by game and tests)
+  game/game.js         visuals/audio/input/camera layer over the Sim
+  render/post.js       desktop post-processing chain
+  entities/loft.js     lofted organic meshes + procedural hair normal map
   entities/            procedural pony/rider/mallet models + gait animation
   world/arena.js       field shader, boards, goals, stands, crowd, sky, scoreboard
   vfx/vfx.js           particle pools, ball trail, shockwaves, decals, confetti, fireworks
   audio/audio.js       procedural sound
   xr/xr.js             Quest rig: tracked mallet, reins, vignette, haptics, in-headset HUD
-  sim/headless.js      rendering-free match runner (tests and balancing)
+  sim/headless.js      AI-vs-AI runner on the shared Sim (tests and balancing)
 tests/                 node:test unit tests and an AI-vs-AI full-match test
 ```
 
@@ -83,4 +97,4 @@ npm run build
 
 `npm run build` writes a static bundle to `dist/`.
 
-See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the design notes and roadmap.
+See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the design notes and roadmap, and [docs/PLAYTEST_REPORT.md](docs/PLAYTEST_REPORT.md) for the playtest critique and the fixes it led to.

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Riders Gang Polo</title>
+  <meta name="description" content="Arena polo for Meta Quest (WebXR) and desktop." />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div id="hud" style="display:none">
+    <div id="score"></div>
+    <div id="toast"></div>
+    <div id="subtoast"></div>
+    <div id="feed"></div>
+    <div id="rider-panel">
+      <div id="gait">Halt</div>
+      <div class="bar"><div id="stamina-fill"></div></div>
+      <div class="label">Pony stamina</div>
+      <div class="bar charge"><div id="charge-fill"></div></div>
+      <div class="label"><span id="side">OFF-SIDE</span> · cam: <span id="cammode">Chase</span></div>
+    </div>
+    <canvas id="minimap" width="220" height="118"></canvas>
+  </div>
+
+  <div id="menu" class="overlay">
+    <div class="card">
+      <div class="kicker">Arena polo · 3 v 3</div>
+      <h1>RIDERS GANG <span>POLO</span></h1>
+      <p class="tag">Gallop, hook and ride off. Hit the line of the ball. Built for Meta Quest, playable on desktop.</p>
+      <div class="opt"><span>Opponents</span>
+        <button data-diff="novice">Novice</button><button data-diff="club" class="on">Club</button><button data-diff="highgoal">High-goal</button></div>
+      <div class="opt"><span>Chukkers</span>
+        <button data-chuk="2">2</button><button data-chuk="4" class="on">4</button><button data-chuk="6">6</button></div>
+      <div class="opt"><span>Length</span>
+        <button data-len="90">1:30</button><button data-len="150" class="on">2:30</button><button data-len="420">7:00</button></div>
+      <div class="actions">
+        <button id="play" class="primary">Play on desktop</button>
+        <button id="vr" class="vr">Checking for VR…</button>
+      </div>
+      <button id="help-btn" class="link">How to play</button>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="card small"><h2>Paused</h2>
+      <div class="actions"><button id="resume" class="primary">Resume</button><button id="quit">Quit to menu</button></div>
+    </div>
+  </div>
+
+  <div id="over" class="overlay hidden">
+    <div class="card small">
+      <div class="kicker">Full time</div>
+      <h2 id="over-title">VICTORY</h2>
+      <div id="over-score"></div>
+      <div id="over-stats"></div>
+      <div class="actions"><button id="again" class="primary">Play again</button><button id="tomenu">Menu</button></div>
+    </div>
+  </div>
+
+  <div id="help">
+    <button id="help-close">×</button>
+    <h3>Desktop</h3>
+    <ul>
+      <li><b>W / S</b> — change gait (halt · walk · trot · canter · gallop)</li>
+      <li><b>A / D</b> — steer &nbsp; <b>Shift</b> — flat-out (uses stamina)</li>
+      <li><b>Hold Space / Left mouse</b> — wind up, <b>release</b> to strike a forehand</li>
+      <li><b>F / Right mouse</b> — backhand &nbsp; <b>Q</b> — switch off-side / near-side</li>
+      <li><b>Mouse</b> — fine aim (click to lock) &nbsp; <b>C</b> — camera &nbsp; <b>M</b> — mute &nbsp; <b>Esc</b> — pause</li>
+      <li>Gamepad: left stick ride, RT forehand, LT backhand, A sprint, LB side</li>
+    </ul>
+    <h3>Meta Quest</h3>
+    <ul>
+      <li><b>Right controller is your mallet</b> — swing for real; harder swings hit further</li>
+      <li><b>Left stick</b> — push up/down to change gait, left/right to steer</li>
+      <li><b>Grip / trigger</b> — gallop flat out &nbsp; <b>B or Y</b> — recentre seat height &nbsp; <b>A</b> — aim assist</li>
+    </ul>
+    <h3>Rules that matter</h3>
+    <ul>
+      <li>Keep the ball on your <b>off-side</b> (right) for the strongest shots.</li>
+      <li>The rider following the <b>line of the ball</b> has right of way. Crossing in front of them is a foul.</li>
+      <li>Side-by-side <b>ride-offs</b> are legal; T-boning at speed is dangerous riding.</li>
+      <li>Teams <b>change ends after every goal</b>. A tie after the last chukker goes to a golden-goal extra chukker.</li>
+    </ul>
+  </div>
+
+  <div id="fps"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
